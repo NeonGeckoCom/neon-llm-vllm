@@ -1,0 +1,2 @@
+openai
+neon-mq-connector>=0.6.1a9,~=0.6
