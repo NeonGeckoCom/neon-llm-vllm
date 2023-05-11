@@ -7,6 +7,7 @@ def main():
     chatgptMQ = ChatgptMQ()
     chatgptMQ.run(run_sync=False, run_consumers=True,
                       daemonize_consumers=True)
+    chatgptMQ.observer_thread.join()
 
 
 
