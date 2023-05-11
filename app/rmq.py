@@ -4,6 +4,7 @@ import os.path
 
 from ovos_utils import LOG
 from neon_mq_connector.connector import MQConnector
+from neon_mq_connector.utils.network_utils import dict_to_b64
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 
 from chatgpt import ChatGPT
@@ -54,14 +55,23 @@ class ChatgptMQ(MQConnector):
         :param method: MQ return method (pika.spec.Basic.Return)
         :param body: request body (dict)
         """
-        #body.pop("message_id", None)
+        message_id = body["message_id"]
+        routing_key = body["routing_key"]
+
         query = body["query"]
         history = body["history"]
 
         response = self.chatGPT.ask(message = query, chat_history = history)
 
         api_response = {
+            "message_id": message_id,
             "response": response
         }
-        self.send_message(api_response, queue = self.queue)
+
+
+        channel.basic_publish(exchange='',
+                                routing_key=routing_key,
+                                body=dict_to_b64(api_response),
+                                properties=pika.BasicProperties(
+                                    expiration=str(1000)))
         channel.basic_ack(method.delivery_tag)
