@@ -18,19 +18,22 @@ class ChatgptMQ(MQConnector):
         chatgpt_config = config.pop("ChatGPT", None)
         self.chatGPT = ChatGPT(chatgpt_config)
 
-        super().__init__(config = config, service_name = 'mq-chatgpt-api')
+        self.service_name = 'mq-chatgpt-api'
+
+        mq_config = config.pop("MQ", None)
+        super().__init__(config = mq_config, service_name = self.service_name)
 
         self.vhost = "/llm"
         self.queue = "chat_gpt_input"
-        self.register_consumer(name=self.queue,
+        self.register_consumer(name=self.service_name,
                                vhost=self.vhost,
                                queue=self.queue,
                                callback=self.handle_request,
                                on_error=self.default_error_handler,
                                auto_ack=False)
 
-    def load_mq_config(self, config_path: str = "config.json"):
-        default_config_path = "default_config.json"
+    def load_mq_config(self, config_path: str = "app/config.json"):
+        default_config_path = "app/default_config.json"
 
         config_path = config_path if os.path.isfile(config_path) else default_config_path
         with open(config_path) as config_file:
