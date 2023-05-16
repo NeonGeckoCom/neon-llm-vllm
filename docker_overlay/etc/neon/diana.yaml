@@ -1,0 +1,21 @@
+log_level: INFO
+logs:
+  level_overrides:
+    error:
+      - pika
+    warning:
+      - filelock
+    info: []
+    debug: []
+MQ:
+  server: api.neon.ai
+  port: 5672
+  users:
+    mq_handler:
+      user: neon_api_utils
+      password: Klatchat2021
+ChatGPT:
+  model: "gpt-3.5-turbo"
+  role: "You are trying to give a short answer in less than 40 words."
+  context_depth: 3
+  max_tokens: 100

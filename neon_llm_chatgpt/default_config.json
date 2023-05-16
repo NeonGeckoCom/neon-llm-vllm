@@ -4,13 +4,13 @@
         "port": "5672",
         "users": {
             "mq-chatgpt-api": {
-                "user": "<user>",
-                "password": "<password>"
+                "user": "",
+                "password": ""
             }
         }
     },
     "ChatGPT": {
-        "key": "sk-XXX",
+        "key": "",
         "model": "gpt-3.5-turbo",
         "role": "You are trying to give a short answer in less than 40 words.",
         "context_depth": 3,

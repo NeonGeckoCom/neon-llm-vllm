@@ -1,9 +1,10 @@
 FROM python:3.9-slim
 
+ENV XDG_CONFIG_HOME /config
+COPY docker_overlay/ /
+
 WORKDIR /app
+COPY . /app
+RUN pip install /app
 
-COPY . .
-
-RUN pip install -r requirements.txt
-
-CMD [ "python3", "app/main.py" ]
+CMD [ "neon-llm-chatgpt" ]
