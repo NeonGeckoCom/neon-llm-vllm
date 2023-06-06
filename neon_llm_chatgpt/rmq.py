@@ -25,9 +25,11 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pika
+
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.network_utils import dict_to_b64
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
+from ovos_utils.log import LOG
 
 from neon_llm_chatgpt.chatgpt import ChatGPT
 from neon_llm_chatgpt.config import load_config
@@ -88,3 +90,4 @@ class ChatgptMQ(MQConnector):
                               properties=pika.BasicProperties(
                                   expiration=str(1000)))
         channel.basic_ack(method.delivery_tag)
+        LOG.info(f"Handled request: {message_id}")
