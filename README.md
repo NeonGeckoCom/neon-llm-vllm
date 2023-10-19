@@ -25,15 +25,16 @@ MQ:
   port: <MQ Port>
   server: <MQ Hostname or IP>
   users:
-    mq-chatgpt-api:
+    neon_llm_chat_gpt:
       password: <neon_chatgpt user's password>
       user: neon_chatgpt
-ChatGPT:
+LLM_CHAT_GPT:
   key: ""
   model: "gpt-3.5-turbo"
   role: "You are trying to give a short answer in less than 40 words."
   context_depth: 3
   max_tokens: 100
+  num_parallel_processes: 2
 ```
 
 For example, if your configuration resides in `~/.config`:
