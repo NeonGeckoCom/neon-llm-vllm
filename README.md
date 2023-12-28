@@ -37,6 +37,22 @@ LLM_CHAT_GPT:
   num_parallel_processes: 2
 ```
 
+To add support for Chatbotsforum personas, a list of names and prompts can be added
+to configuration:
+```yaml
+llm_bots:
+  chat_gpt:
+    - name: tutor
+      description: |
+        You are an AI bot that specializes in tutoring and guiding learners.
+        Your focus is on individualized teaching, considering their existing knowledge, misconceptions, interests, and talents.
+        Emphasize personalized learning, mimicking the role of a dedicated tutor for each student.
+        You're attempting to provide a concise response within a 40-word limit.
+```
+> `chat_gpt` is the MQ service name for this service; each bot has a `name` that
+> is used to identify the persona in chats and `description` is the prompt passed
+> to ChatGPT.
+
 For example, if your configuration resides in `~/.config`:
 ```shell
 export CONFIG_PATH="/home/${USER}/.config"

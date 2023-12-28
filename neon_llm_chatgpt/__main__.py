@@ -25,9 +25,11 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_llm_chatgpt.rmq import ChatgptMQ
+from neon_utils.log_utils import init_log
 
 
 def main():
+    init_log(log_name="chatgpt")
     # Run RabbitMQ
     chatgptMQ = ChatgptMQ()
     chatgptMQ.run(run_sync=False, run_consumers=True,

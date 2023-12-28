@@ -1,4 +1,5 @@
 # model
 openai[embeddings]~=0.27
 # networking
-neon_llm_core~=0.1.0
+neon_llm_core[chatbots]~=0.1.0,>=0.1.1a1
+ovos-utils~=0.0.32

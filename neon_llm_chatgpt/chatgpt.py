@@ -29,6 +29,7 @@ from openai.embeddings_utils import get_embeddings, distances_from_embeddings
 
 from typing import List, Dict
 from neon_llm_core.llm import NeonLLM
+from ovos_utils.log import LOG
 
 
 class ChatGPT(NeonLLM):
@@ -71,7 +72,7 @@ class ChatGPT(NeonLLM):
         return self.role
 
     def warmup(self):
-        self.model
+        _ = self.model
 
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
         """
@@ -102,7 +103,7 @@ class ChatGPT(NeonLLM):
             max_tokens=self.max_tokens,
         )
         text = response.choices[0].message['content']
-
+        LOG.debug(text)
         return text
 
     def _assemble_prompt(self, message: str, chat_history: List[List[str]], persona: dict) -> List[Dict[str, str]]:
