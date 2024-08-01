@@ -15,14 +15,14 @@ MQ:
     mq_handler:
       user: neon_api_utils
       password: Klatchat2021
-LLM_CHAT_GPT:
-  model: "gpt-3.5-turbo"
-  role: "You are trying to give a short answer in less than 40 words."
-  context_depth: 3
+LLM_VLLM:
+  api_url: "http://localhost:5000"
+  role: "You are NeonLLM."
+  context_depth: 4
   max_tokens: 100
   num_parallel_processes: 2
 #llm_bots:
-#  chat_gpt:
+#  vllm:
 #    - name: urban_logic
 #      description: |
 #        You are an AI bot that specializes in smart city planning.
