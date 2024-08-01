@@ -1,5 +1,7 @@
 # model
-openai[embeddings]~=0.27
+openai~=1.37
+transformers[sentencepiece]~=4.42
+jinja2>=3.1.0
 # networking
 neon_llm_core[chatbots]~=0.1.0,>=0.1.1a3
 ovos-utils~=0.0.32
