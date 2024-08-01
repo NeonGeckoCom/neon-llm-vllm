@@ -212,8 +212,8 @@ class VLLM(NeonLLM):
             :returns ppl value answer
         """
         tokens = logprobs.tokens
-        start_index, _ = self.find_substring_indices(tokens, answer)
-        answer_logprobs = logprobs.token_logprobs[start_index:-1]
+        start_index, end_index = self.find_substring_indices(tokens, answer)
+        answer_logprobs = logprobs.token_logprobs[start_index: end_index+2]
         ppl = self._compute_ppl(answer_logprobs)
         return ppl
     
