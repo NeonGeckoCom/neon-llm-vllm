@@ -1,5 +1,5 @@
-# NeonAI LLM ChatGPT
-Proxies API calls to ChatGPT.
+# NeonAI LLM VLLM
+Proxies API calls to VLLM Server.
 
 ## Request Format
 API requests should include `history`, a list of tuples of strings, and the current
@@ -25,14 +25,14 @@ MQ:
   port: <MQ Port>
   server: <MQ Hostname or IP>
   users:
-    neon_llm_chat_gpt:
-      password: <neon_chatgpt user's password>
-      user: neon_chatgpt
-LLM_CHAT_GPT:
+    neon_llm_vllm:
+      password: <neon_vllm user's password>
+      user: neon_vllm
+LLM_VLLM:
   key: ""
-  model: "gpt-3.5-turbo"
-  role: "You are trying to give a short answer in less than 40 words."
-  context_depth: 3
+  api_url: "http://localhost:5000"
+  role: "You are NeonLLM."
+  context_depth: 4
   max_tokens: 100
   num_parallel_processes: 2
 ```
@@ -41,7 +41,7 @@ To add support for Chatbotsforum personas, a list of names and prompts can be ad
 to configuration:
 ```yaml
 llm_bots:
-  chat_gpt:
+  vllm:
     - name: tutor
       description: |
         You are an AI bot that specializes in tutoring and guiding learners.
@@ -49,13 +49,13 @@ llm_bots:
         Emphasize personalized learning, mimicking the role of a dedicated tutor for each student.
         You're attempting to provide a concise response within a 40-word limit.
 ```
-> `chat_gpt` is the MQ service name for this service; each bot has a `name` that
+> `vllm` is the MQ service name for this service; each bot has a `name` that
 > is used to identify the persona in chats and `description` is the prompt passed
-> to ChatGPT.
+> to VLLM Server.
 
 For example, if your configuration resides in `~/.config`:
 ```shell
 export CONFIG_PATH="/home/${USER}/.config"
-docker run -v ${CONFIG_PATH}:/config neon_llm_chatgpt
+docker run -v ${CONFIG_PATH}:/config neon_llm_vllm
 ```
 > Note: If connecting to a local MQ server, you may need to specify `--network host`
