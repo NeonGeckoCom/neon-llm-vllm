@@ -42,6 +42,8 @@ class VLLM(NeonLLM):
 
     def __init__(self, config):
         super().__init__(config)
+        self._context_depth = 0
+        
         self.api_url = config["api_url"]
         self.role = config["role"]
         self.context_depth = config["context_depth"]
@@ -49,6 +51,14 @@ class VLLM(NeonLLM):
         self.api_key = config["key"]
         self.hf_token = config["hf_token"]
         self.warmup()
+
+    @property
+    def context_depth(self):
+        return self._context_depth
+
+    @context_depth.setter
+    def context_depth(self, value):
+        self._context_depth = value + value % 2
 
     @property
     def tokenizer(self) -> None:
