@@ -134,7 +134,6 @@ class VLLM(NeonLLM):
             temperature=0,
             max_tokens=self.max_tokens,
             extra_body={
-                "add_special_tokens": True,
                 "repetition_penalty": 1.05,
                 "use_beam_search": True,
                 "best_of": 5,
