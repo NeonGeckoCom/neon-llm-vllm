@@ -25,12 +25,12 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from neon_llm_core.rmq import NeonLLMMQConnector
 
-from neon_llm_chatgpt.chatgpt import ChatGPT
+from neon_llm_vllm.vllm import VLLM
 
 
-class ChatgptMQ(NeonLLMMQConnector):
+class VllmMQ(NeonLLMMQConnector):
     """
-        Module for processing MQ requests to ChatGPT
+        Module for processing MQ requests to VLLM Server
     """
 
     def __init__(self):
@@ -39,12 +39,12 @@ class ChatgptMQ(NeonLLMMQConnector):
 
     @property
     def name(self):
-        return "chat_gpt"
+        return "vllm"
 
     @property
     def model(self):
         if self._model is None:
-            self._model = ChatGPT(self.model_config)
+            self._model = VLLM(self.model_config)
         return self._model
 
     def warmup(self):
