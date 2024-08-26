@@ -23,14 +23,30 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from dataclasses import dataclass
+from functools import cached_property
 
 import openai
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import numpy as np
 
-from typing import List, Dict
+from typing import List, Optional
 from neon_llm_core.llm import NeonLLM
 from ovos_utils.log import LOG
+
+
+COMPLETION_GENERATION_EXTRA_ARGUMENTS = {
+    "repetition_penalty": 1.05,
+    "use_beam_search": True,
+    "best_of": 5,
+}
+
+
+@dataclass(frozen=True)
+class ModelMetadata:
+    vllm_model_name: str
+    model_name: str
+    revision: Optional[str] = None
 
 
 class VLLM(NeonLLM):
@@ -60,51 +76,54 @@ class VLLM(NeonLLM):
     def context_depth(self, value):
         self._context_depth = value + value % 2
 
-    @property
-    def tokenizer(self) -> None:
-        if self._tokenizer is None:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                self.tokenizer_model_name,
-                revision=self.revision,
-                token=self.hf_token)
-        return self._tokenizer
+    @cached_property
+    def tokenizer(self) -> PreTrainedTokenizerBase:
+        return AutoTokenizer.from_pretrained(
+                    self.tokenizer_model_name,
+                    revision=self.model_metadata.revision,
+                    token=self.hf_token
+                )
 
     @property
     def tokenizer_model_name(self) -> str:
-        return self.model_name
+        return self.model_metadata.model_name
 
-    @property
+    @cached_property
     def model(self) -> openai.OpenAI:
-        if self._model is None:
-            self._model = openai.OpenAI(
+        return openai.OpenAI(
                 base_url=f"{self.api_url}/v1",
                 api_key=self.api_key,
             )
-        return self._model
 
     @property
     def llm_model_name(self) -> str:
-        return self.vllm_model_name
+        return self.model_metadata.vllm_model_name
 
     @property
     def _system_prompt(self) -> str:
         return self.role
 
     def warmup(self):
+        """
+            First initialisation of model and tokenizer properties
+            Lazy initialisation causes unexpected connectivity issues
+        """
         _ = self.model
-        self.get_metadata()
         _ = self.tokenizer
 
-    def get_metadata(self):
+    @cached_property
+    def model_metadata(self) -> ModelMetadata:
         models = self.model.models.list()
         vllm_model_name = models.data[0].id
 
         model_name, *suffix = vllm_model_name.split("@")
         revision = dict(enumerate(suffix)).get(0, None)
 
-        self.vllm_model_name = vllm_model_name
-        self.model_name = model_name
-        self.revision = revision
+        return ModelMetadata(
+            vllm_model_name=vllm_model_name,
+            model_name=model_name,
+            revision=revision,
+        )
 
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
         """
@@ -112,6 +131,7 @@ class VLLM(NeonLLM):
             Answers are sorted from best to worst
             :param question: incoming question
             :param answers: list of answers to rank
+            :param persona: dictionary with persona's data
             :returns list of indexes
         """
         if not answers:
@@ -133,11 +153,7 @@ class VLLM(NeonLLM):
             prompt=prompt,
             temperature=0,
             max_tokens=self.max_tokens,
-            extra_body={
-                "repetition_penalty": 1.05,
-                "use_beam_search": True,
-                "best_of": 5,
-            },
+            extra_body=COMPLETION_GENERATION_EXTRA_ARGUMENTS,
         )
         text = response.choices[0].text
         LOG.debug(text)
@@ -161,11 +177,12 @@ class VLLM(NeonLLM):
         for role, content in chat_history[-self.context_depth:]:
             role_vllm = self.convert_role(role)
             messages.append({"role": role_vllm, "content": content})
-        if add_generation_prompt == True:
+        if add_generation_prompt:
             messages.append({"role": "user", "content": message})
 
-        prompt = self.tokenizer.apply_chat_template(messages, tokenize=False,
-                                    add_generation_prompt=add_generation_prompt)
+        prompt = self.tokenizer.apply_chat_template(conversation=messages,
+                                                    tokenize=False,
+                                                    add_generation_prompt=add_generation_prompt)
         return prompt
 
     def _score(self, prompt: str, targets: List[str], persona: dict) -> List[float]:
@@ -177,14 +194,15 @@ class VLLM(NeonLLM):
         """
         prompts = [self._assemble_prompt(message="", chat_history=[["user", prompt], ["llm", target]], persona=persona,
                                          add_generation_prompt=False) for target in targets]
-        logprobs_list = self._call_logprobs(prompts)
-        scores_list = [self._ppl(target, logprobs) for target, logprobs in zip(targets, logprobs_list)]
+        logprobs_list = self._compute_logprobs(prompts)
+        scores_list = [self._evaluate_ppl_score(target, logprobs)
+                       for target, logprobs in zip(targets, logprobs_list)]
         return scores_list
 
     def _tokenize(self, prompt: str) -> None:
         pass
 
-    def _call_logprobs(self, prompts: List[str]) -> List[openai.types.completion_choice.Logprobs]:
+    def _compute_logprobs(self, prompts: List[str]) -> List[openai.types.completion_choice.Logprobs]:
         """
             Computes logprobs for the list of provided prompts
             :param prompts: List of provided prompts
@@ -204,12 +222,12 @@ class VLLM(NeonLLM):
         logprobs_list = [choice.logprobs for choice in completion.choices]
         return logprobs_list
 
-    def _ppl(self, answer: str, logprobs: openai.types.completion_choice.Logprobs) -> float:
+    def _evaluate_ppl_score(self, answer: str, logprobs: openai.types.completion_choice.Logprobs) -> float:
         """
-            Computes PPL value for the provided answer
-            :param answer: provided answer
-            :param logprobs: prompt logprobs
-            :returns ppl value answer
+            Evaluates PPL value for the provided answer
+            :param answer: string sequence to evaluate
+            :param logprobs: logarithmic probabilities of the incoming prompt
+            :returns ppl value corresponding to provided string sequence
         """
         tokens = logprobs.tokens
         start_index, end_index = self.find_substring_indices(tokens, answer)

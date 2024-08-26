@@ -31,10 +31,10 @@ from neon_utils.log_utils import init_log
 def main():
     init_log(log_name="vllm")
     # Run RabbitMQ
-    vllmMQ = VllmMQ()
-    vllmMQ.run(run_sync=False, run_consumers=True,
-                  daemonize_consumers=True)
-    vllmMQ.observer_thread.join()
+    vllm_mq_service = VllmMQ()
+    vllm_mq_service.run(run_sync=False,
+                        run_observer=False,
+                        daemonize_consumers=False)
 
 
 if __name__ == "__main__":
