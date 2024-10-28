@@ -67,12 +67,12 @@ with open(path.join(BASE_PATH, "version.py"), "r", encoding="utf-8") as v:
                 version = line.split("'")[1]
 
 setup(
-    name='neon-llm-chatgpt',
+    name='neon-llm-vllm',
     version=version,
-    description='LLM service for Chat GPT',
+    description='LLM service for VLLM Server',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/NeonGeckoCom/neon-llm-chatgpt',
+    url='https://github.com/NeonGeckoCom/neon-llm-vllm',
     author='Neongecko',
     author_email='developers@neon.ai',
     license='BSD-3.0',
@@ -85,7 +85,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'neon-llm-chatgpt=neon_llm_chatgpt.__main__:main'
+            'neon-llm-vllm=neon_llm_vllm.__main__:main'
         ]
     }
 )

@@ -24,17 +24,17 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from neon_llm_chatgpt.rmq import ChatgptMQ
-from neon_utils.log_utils import init_log
+from neon_llm_vllm.rmq import VllmMQ
+from ovos_utils.log import init_service_logger
 
 
 def main():
-    init_log(log_name="chatgpt")
+    init_service_logger(service_name="vllm")
     # Run RabbitMQ
-    chatgptMQ = ChatgptMQ()
-    chatgptMQ.run(run_sync=False, run_consumers=True,
-                  daemonize_consumers=True)
-    chatgptMQ.observer_thread.join()
+    vllm_mq_service = VllmMQ()
+    vllm_mq_service.run(run_sync=False,
+                        run_observer=False,
+                        daemonize_consumers=False)
 
 
 if __name__ == "__main__":

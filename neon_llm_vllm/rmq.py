@@ -23,14 +23,17 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+from functools import cached_property
+
 from neon_llm_core.rmq import NeonLLMMQConnector
 
-from neon_llm_chatgpt.chatgpt import ChatGPT
+from neon_llm_vllm.vllm import VLLM
 
 
-class ChatgptMQ(NeonLLMMQConnector):
+class VllmMQ(NeonLLMMQConnector):
     """
-        Module for processing MQ requests to ChatGPT
+        Module for processing MQ requests to VLLM Server
     """
 
     def __init__(self):
@@ -39,13 +42,11 @@ class ChatgptMQ(NeonLLMMQConnector):
 
     @property
     def name(self):
-        return "chat_gpt"
+        return "vllm"
 
-    @property
-    def model(self):
-        if self._model is None:
-            self._model = ChatGPT(self.model_config)
-        return self._model
+    @cached_property
+    def model(self) -> VLLM:
+        return VLLM(self.model_config)
 
     def warmup(self):
         """
