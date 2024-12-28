@@ -138,19 +138,37 @@ class VLLM(NeonLLM):
         _ = self.model
         _ = self.tokenizer
 
-    @cached_property
-    def model_metadata(self) -> ModelMetadata:
-        models = self.model.models.list()
+    def get_model_metadata(self, api_url: str, api_key: str) -> ModelMetadata:
+        model = self.model(api_url, api_key)
+        models = model.models.list()
         vllm_model_name = models.data[0].id
 
         model_name, *suffix = vllm_model_name.split("@")
         revision = dict(enumerate(suffix)).get(0, None)
 
-        return ModelMetadata(
+        tokenizer = self.tokenizer(model_name, revision)
+        personas = self.get_personas(model_name, revision)
+
+        return vllm_model_name, ModelMetadata(
             vllm_model_name=vllm_model_name,
             model_name=model_name,
             revision=revision,
+
+            personas=personas,
+
+            model=model,
+            tokenizer=tokenizer,
         )
+    
+    def get_personas(self, model_name: str, revision: str) -> Dict[str, str]:
+        config_path = hf_hub_download(model_name, "config.yaml",
+                                      subfolder="datasets",
+                                      revision=revision,
+                                      token=self.hf_token)
+        config = ModelConfig.from_yaml(config_path)
+        personas = config.pile.persona2system
+        return personas
+        
 
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
         """
