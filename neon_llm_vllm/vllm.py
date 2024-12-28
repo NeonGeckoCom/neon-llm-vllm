@@ -240,7 +240,7 @@ class VLLM(NeonLLM):
             :param chat_history: History of preceding conversation
             :returns: assembled prompt
         """
-        system_prompt = persona.get("description", self._system_prompt)
+        system_prompt = persona["description"]
         messages = [
             {"role": "system", "content": system_prompt},
         ]
