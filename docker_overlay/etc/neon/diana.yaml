@@ -18,7 +18,6 @@ MQ:
 LLM_VLLM:
   api_url:
     - "http://localhost:5000"
-  role: "You are NeonLLM."
   context_depth: 4
   max_tokens: 100
   num_parallel_processes: 2

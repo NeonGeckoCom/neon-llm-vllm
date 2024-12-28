@@ -66,7 +66,6 @@ class VLLM(NeonLLM):
         self._context_depth = 0
         
         self.api_url = config["api_url"]
-        self.role = config["role"]
         self.context_depth = config["context_depth"]
         self.max_tokens = config["max_tokens"]
         self.api_key = config["key"]
