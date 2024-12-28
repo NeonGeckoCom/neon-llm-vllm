@@ -71,12 +71,12 @@ class ModelConfig(BaseModel):
 class ModelMetadata:
     vllm_model_name: str
     model_name: str
-    revision: Optional[str] = None
-
     personas: Dict[str, str]
 
     model: openai.OpenAI
     tokenizer: PreTrainedTokenizerBase
+
+    revision: Optional[str] = None
 
 
 class VLLM(NeonLLM):
