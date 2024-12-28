@@ -33,7 +33,7 @@ from pydantic import BaseModel,ValidationError
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import numpy as np
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Tuple, Optional
 from neon_llm_core.llm import NeonLLM
 from ovos_utils.log import LOG
 
@@ -188,6 +188,29 @@ class VLLM(NeonLLM):
         sorted_items = sorted(zip(range(len(answers)), scores), key=lambda x: x[1])
         sorted_items_indexes = [x[0] for x in sorted_items]
         return sorted_items_indexes
+
+    def parse_persona_dict(self, persona: dict) -> Tuple[openai.OpenAI, Dict[str, str]]:
+        description = persona.get("description", "")
+
+        # get model
+        model_name = description.split(",")[0].strip()
+        if model_name not in self.models:
+            # fall back to first model
+            model_name = list(self.models.keys())[0]
+        model = self.models[model_name]
+
+        # get persona
+        try:
+            persona_name = description.split(",")[1].strip()
+        except:
+            persona_name = ""
+        if persona_name not in model.personas:
+            # fall back to first persona
+            persona_name = list(model.personas.keys())[0]
+        system_prompt = model.personas[persona_name]
+        persona = {"description": system_prompt}
+
+        return model, persona
 
     def _call_model(self, prompt: str) -> str:
         """
