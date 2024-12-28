@@ -215,6 +215,12 @@ class VLLM(NeonLLM):
         }
         return persona
 
+    def ask(self, message: str, chat_history: List[List[str]], persona: dict) -> str:
+        """ Generates llm response based on user message and (user, llm) chat history """
+        prompt = self._assemble_prompt(message, chat_history, persona)
+        llm_text_output = self._call_model(prompt)
+        return llm_text_output
+
     def _call_model(self, prompt: str) -> str:
         """
             Wrapper for VLLM Model generation logic
