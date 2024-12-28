@@ -26,7 +26,10 @@
 from dataclasses import dataclass
 from functools import cached_property
 
+import yaml
 import openai
+from huggingface_hub import hf_hub_download
+from pydantic import BaseModel,ValidationError
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import numpy as np
 
@@ -40,6 +43,28 @@ COMPLETION_GENERATION_EXTRA_ARGUMENTS = {
     "use_beam_search": True,
     "best_of": 5,
 }
+
+class PileConfig(BaseModel):
+    persona2system: Dict[str, str]
+
+# TODO: use this params instead of COMPLETION_GENERATION_EXTRA_ARGUMENTS
+class InferenceConfig(BaseModel):
+    streaming: bool = True
+    temperature: float = 0.0
+    repetition_penalty: float = 1.05
+
+class ModelConfig(BaseModel):
+    pile: PileConfig
+    inference: InferenceConfig
+
+    @classmethod
+    def from_yaml(cls, yaml_file="datasets/config.yaml"):
+        with open(yaml_file, 'r') as file:
+            data = yaml.safe_load(file)
+        try:
+            return cls(**data)
+        except ValidationError as e:
+            raise e
 
 
 @dataclass(frozen=True)
