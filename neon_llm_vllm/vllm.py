@@ -89,6 +89,7 @@ class VLLM(NeonLLM):
     def __init__(self, config):
         super().__init__(config)
         self._context_depth = 0
+        self.models={}
         
         self.api_url = config["api_url"]
         self.context_depth = config["context_depth"]
@@ -135,8 +136,10 @@ class VLLM(NeonLLM):
             First initialisation of model and tokenizer properties
             Lazy initialisation causes unexpected connectivity issues
         """
-        _ = self.model
-        _ = self.tokenizer
+        for api_url, api_key in zip(self.api_url, self.api_key):
+            vllm_model_name, model = self.get_model_metadata(api_url, api_key)
+            self.models[vllm_model_name] = model
+
 
     def get_model_metadata(self, api_url: str, api_key: str) -> ModelMetadata:
         model = self.model(api_url, api_key)
