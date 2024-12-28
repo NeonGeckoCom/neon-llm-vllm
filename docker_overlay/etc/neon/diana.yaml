@@ -16,7 +16,8 @@ MQ:
       user: neon_api_utils
       password: Klatchat2021
 LLM_VLLM:
-  api_url: "http://localhost:5000"
+  api_url:
+    - "http://localhost:5000"
   role: "You are NeonLLM."
   context_depth: 4
   max_tokens: 100
