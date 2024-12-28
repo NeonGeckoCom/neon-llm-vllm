@@ -189,7 +189,7 @@ class VLLM(NeonLLM):
         sorted_items_indexes = [x[0] for x in sorted_items]
         return sorted_items_indexes
 
-    def parse_persona_dict(self, persona: dict) -> Tuple[openai.OpenAI, Dict[str, str]]:
+    def parse_persona_dict(self, persona: dict) -> dict:
         description = persona.get("description", "")
 
         # get model
@@ -208,9 +208,12 @@ class VLLM(NeonLLM):
             # fall back to first persona
             persona_name = list(model.personas.keys())[0]
         system_prompt = model.personas[persona_name]
-        persona = {"description": system_prompt}
 
-        return model, persona
+        persona = {
+            "description": system_prompt,
+            "model": model
+        }
+        return persona
 
     def _call_model(self, prompt: str) -> str:
         """
