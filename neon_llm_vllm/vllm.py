@@ -30,7 +30,7 @@ import openai
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import numpy as np
 
-from typing import List, Optional
+from typing import List, Dict, Optional
 from neon_llm_core.llm import NeonLLM
 from ovos_utils.log import LOG
 
@@ -47,6 +47,11 @@ class ModelMetadata:
     vllm_model_name: str
     model_name: str
     revision: Optional[str] = None
+
+    personas: Dict[str, str]
+
+    model: openai.OpenAI
+    tokenizer: PreTrainedTokenizerBase
 
 
 class VLLM(NeonLLM):
