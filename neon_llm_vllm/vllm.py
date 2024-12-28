@@ -81,32 +81,30 @@ class VLLM(NeonLLM):
     def context_depth(self, value):
         self._context_depth = value + value % 2
 
-    @cached_property
-    def tokenizer(self) -> PreTrainedTokenizerBase:
+    def tokenizer(self, tokenizer_model_name, revision) -> PreTrainedTokenizerBase:
         return AutoTokenizer.from_pretrained(
-                    self.tokenizer_model_name,
-                    revision=self.model_metadata.revision,
+                    tokenizer_model_name,
+                    revision=revision,
                     token=self.hf_token
                 )
 
     @property
     def tokenizer_model_name(self) -> str:
-        return self.model_metadata.model_name
+        pass
 
-    @cached_property
-    def model(self) -> openai.OpenAI:
+    def model(self, api_url, api_key) -> openai.OpenAI:
         return openai.OpenAI(
-                base_url=f"{self.api_url}/v1",
-                api_key=self.api_key,
+                base_url=f"{api_url}/v1",
+                api_key=api_key,
             )
 
     @property
     def llm_model_name(self) -> str:
-        return self.model_metadata.vllm_model_name
+        pass
 
     @property
     def _system_prompt(self) -> str:
-        return self.role
+        pass
 
     def warmup(self):
         """
