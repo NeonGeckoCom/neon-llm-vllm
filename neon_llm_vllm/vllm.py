@@ -26,11 +26,14 @@
 from dataclasses import dataclass
 from functools import cached_property
 
+import yaml
 import openai
+from huggingface_hub import hf_hub_download
+from pydantic import BaseModel,ValidationError
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
 import numpy as np
 
-from typing import List, Optional
+from typing import List, Dict, Tuple, Optional
 from neon_llm_core.llm import NeonLLM
 from ovos_utils.log import LOG
 
@@ -41,11 +44,38 @@ COMPLETION_GENERATION_EXTRA_ARGUMENTS = {
     "best_of": 5,
 }
 
+class PileConfig(BaseModel):
+    persona2system: Dict[str, str]
+
+# TODO: use this params instead of COMPLETION_GENERATION_EXTRA_ARGUMENTS
+class InferenceConfig(BaseModel):
+    streaming: bool = True
+    temperature: float = 0.0
+    repetition_penalty: float = 1.05
+
+class ModelConfig(BaseModel):
+    pile: PileConfig
+    inference: InferenceConfig
+
+    @classmethod
+    def from_yaml(cls, yaml_file="datasets/config.yaml"):
+        with open(yaml_file, 'r') as file:
+            data = yaml.safe_load(file)
+        try:
+            return cls(**data)
+        except ValidationError as e:
+            raise e
+
 
 @dataclass(frozen=True)
 class ModelMetadata:
     vllm_model_name: str
     model_name: str
+    personas: Dict[str, str]
+
+    model: openai.OpenAI
+    tokenizer: PreTrainedTokenizerBase
+
     revision: Optional[str] = None
 
 
@@ -59,9 +89,9 @@ class VLLM(NeonLLM):
     def __init__(self, config):
         super().__init__(config)
         self._context_depth = 0
+        self.models={}
         
         self.api_url = config["api_url"]
-        self.role = config["role"]
         self.context_depth = config["context_depth"]
         self.max_tokens = config["max_tokens"]
         self.api_key = config["key"]
@@ -76,54 +106,72 @@ class VLLM(NeonLLM):
     def context_depth(self, value):
         self._context_depth = value + value % 2
 
-    @cached_property
-    def tokenizer(self) -> PreTrainedTokenizerBase:
+    def tokenizer(self, tokenizer_model_name, revision) -> PreTrainedTokenizerBase:
         return AutoTokenizer.from_pretrained(
-                    self.tokenizer_model_name,
-                    revision=self.model_metadata.revision,
+                    tokenizer_model_name,
+                    revision=revision,
                     token=self.hf_token
                 )
 
     @property
     def tokenizer_model_name(self) -> str:
-        return self.model_metadata.model_name
+        pass
 
-    @cached_property
-    def model(self) -> openai.OpenAI:
+    def model(self, api_url, api_key) -> openai.OpenAI:
         return openai.OpenAI(
-                base_url=f"{self.api_url}/v1",
-                api_key=self.api_key,
+                base_url=f"{api_url}/v1",
+                api_key=api_key,
             )
 
     @property
     def llm_model_name(self) -> str:
-        return self.model_metadata.vllm_model_name
+        pass
 
     @property
     def _system_prompt(self) -> str:
-        return self.role
+        pass
 
     def warmup(self):
         """
             First initialisation of model and tokenizer properties
             Lazy initialisation causes unexpected connectivity issues
         """
-        _ = self.model
-        _ = self.tokenizer
+        for api_url, api_key in zip(self.api_url, self.api_key):
+            model = self.get_model_metadata(api_url, api_key)
+            self.models[model.vllm_model_name] = model
 
-    @cached_property
-    def model_metadata(self) -> ModelMetadata:
-        models = self.model.models.list()
+
+    def get_model_metadata(self, api_url: str, api_key: str) -> ModelMetadata:
+        model = self.model(api_url, api_key)
+        models = model.models.list()
         vllm_model_name = models.data[0].id
 
         model_name, *suffix = vllm_model_name.split("@")
         revision = dict(enumerate(suffix)).get(0, None)
 
+        tokenizer = self.tokenizer(model_name, revision)
+        personas = self.get_personas(model_name, revision)
+
         return ModelMetadata(
             vllm_model_name=vllm_model_name,
             model_name=model_name,
             revision=revision,
+
+            personas=personas,
+
+            model=model,
+            tokenizer=tokenizer,
         )
+    
+    def get_personas(self, model_name: str, revision: str) -> Dict[str, str]:
+        config_path = hf_hub_download(model_name, "config.yaml",
+                                      subfolder="datasets",
+                                      revision=revision,
+                                      token=self.hf_token)
+        config = ModelConfig.from_yaml(config_path)
+        personas = config.pile.persona2system
+        return personas
+        
 
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
         """
@@ -136,20 +184,56 @@ class VLLM(NeonLLM):
         """
         if not answers:
             return []
-        scores = self._score(prompt=question, targets=answers, persona=persona)
+        persona_parsed = self.parse_persona_dict(persona)
+        scores = self._score(prompt=question, targets=answers, persona=persona_parsed)
         sorted_items = sorted(zip(range(len(answers)), scores), key=lambda x: x[1])
         sorted_items_indexes = [x[0] for x in sorted_items]
         return sorted_items_indexes
 
-    def _call_model(self, prompt: str) -> str:
+    def parse_persona_dict(self, persona: dict) -> dict:
+        description = persona.get("description", "")
+
+        # get model
+        model_name = description.split(",")[0].strip()
+        if model_name not in self.models:
+            # fall back to first model
+            model_name = list(self.models.keys())[0]
+        model = self.models[model_name]
+
+        # get persona
+        try:
+            persona_name = description.split(",")[1].strip()
+        except:
+            persona_name = ""
+        if persona_name not in model.personas:
+            # fall back to first persona
+            persona_name = list(model.personas.keys())[0]
+        system_prompt = model.personas[persona_name]
+
+        persona = {
+            "description": system_prompt,
+            "model": model
+        }
+        return persona
+
+    def ask(self, message: str, chat_history: List[List[str]], persona: dict) -> str:
+        """ Generates llm response based on user message and (user, llm) chat history """
+        persona_parsed = self.parse_persona_dict(persona)
+        prompt = self._assemble_prompt(message, chat_history, persona_parsed)
+        llm_text_output = self._call_model(prompt, persona_parsed)
+        return llm_text_output
+
+    def _call_model(self, prompt: str, persona: dict) -> str:
         """
             Wrapper for VLLM Model generation logic
             :param prompt: Input messages sequence
             :returns: Output text sequence generated by model
         """
+        model = persona["model"].model
+        llm_model_name = persona["model"].vllm_model_name
 
-        response = self.model.completions.create(
-            model=self.llm_model_name,
+        response = model.completions.create(
+            model=llm_model_name,
             prompt=prompt,
             temperature=0,
             max_tokens=self.max_tokens,
@@ -169,7 +253,7 @@ class VLLM(NeonLLM):
             :param chat_history: History of preceding conversation
             :returns: assembled prompt
         """
-        system_prompt = persona.get("description", self._system_prompt)
+        system_prompt = persona["description"]
         messages = [
             {"role": "system", "content": system_prompt},
         ]
@@ -180,7 +264,8 @@ class VLLM(NeonLLM):
         if add_generation_prompt:
             messages.append({"role": "user", "content": message})
 
-        prompt = self.tokenizer.apply_chat_template(conversation=messages,
+        tokenizer = persona["model"].tokenizer
+        prompt = tokenizer.apply_chat_template(conversation=messages,
                                                     tokenize=False,
                                                     add_generation_prompt=add_generation_prompt)
         return prompt
@@ -194,7 +279,7 @@ class VLLM(NeonLLM):
         """
         prompts = [self._assemble_prompt(message="", chat_history=[["user", prompt], ["llm", target]], persona=persona,
                                          add_generation_prompt=False) for target in targets]
-        logprobs_list = self._compute_logprobs(prompts)
+        logprobs_list = self._compute_logprobs(prompts, persona)
         scores_list = [self._evaluate_ppl_score(target, logprobs)
                        for target, logprobs in zip(targets, logprobs_list)]
         return scores_list
@@ -202,14 +287,17 @@ class VLLM(NeonLLM):
     def _tokenize(self, prompt: str) -> None:
         pass
 
-    def _compute_logprobs(self, prompts: List[str]) -> List[openai.types.completion_choice.Logprobs]:
+    def _compute_logprobs(self, prompts: List[str], persona: dict) -> List[openai.types.completion_choice.Logprobs]:
         """
             Computes logprobs for the list of provided prompts
             :param prompts: List of provided prompts
             :returns logprobs for each prompt
         """
-        completion = self.model.completions.create(
-            model=self.llm_model_name,
+        model = persona["model"].model
+        llm_model_name = persona["model"].vllm_model_name
+
+        completion = model.completions.create(
+            model=llm_model_name,
             prompt=prompts,
             echo=True,
             logprobs=1,
