@@ -137,8 +137,8 @@ class VLLM(NeonLLM):
             Lazy initialisation causes unexpected connectivity issues
         """
         for api_url, api_key in zip(self.api_url, self.api_key):
-            vllm_model_name, model = self.get_model_metadata(api_url, api_key)
-            self.models[vllm_model_name] = model
+            model = self.get_model_metadata(api_url, api_key)
+            self.models[model.vllm_model_name] = model
 
 
     def get_model_metadata(self, api_url: str, api_key: str) -> ModelMetadata:
@@ -152,7 +152,7 @@ class VLLM(NeonLLM):
         tokenizer = self.tokenizer(model_name, revision)
         personas = self.get_personas(model_name, revision)
 
-        return vllm_model_name, ModelMetadata(
+        return ModelMetadata(
             vllm_model_name=vllm_model_name,
             model_name=model_name,
             revision=revision,
