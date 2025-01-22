@@ -25,11 +25,11 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_llm_vllm.rmq import VllmMQ
-from ovos_utils.log import init_service_logger
+from neon_utils.log_utils import init_log
 
 
 def main():
-    init_service_logger(service_name="vllm")
+    init_log(log_name="llm_vllm")
     # Run RabbitMQ
     vllm_mq_service = VllmMQ()
     vllm_mq_service.run(run_sync=False,
