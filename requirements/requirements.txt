@@ -3,6 +3,6 @@ openai~=1.37
 transformers[sentencepiece]~=4.42
 jinja2~=3.1.0
 # networking
-neon_llm_core[chatbots]~=0.1.0,>=0.1.1a8
+neon_llm_core[chatbots] @ git+https://github.com/NeonGeckoCom/neon-llm-core@FEAT_PersonaUpdateEvents
 ovos-utils~=0.0,>=0.0.32
 ovos-config~=0.1
