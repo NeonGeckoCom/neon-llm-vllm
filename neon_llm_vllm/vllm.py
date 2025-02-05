@@ -201,7 +201,8 @@ class VLLM(NeonLLM):
             else:
                 # fall back to first model
                 model_name = list(self.models.keys())[0]
-            LOG.error(f"Invalid model requested: {model_name}. "
+            LOG.error(f"Invalid model requested: "
+                      f"{description.split(",")[0].strip()}. "
                       f"Inferred model={model_name}")
         model = self.models[model_name]
 
@@ -213,7 +214,8 @@ class VLLM(NeonLLM):
         if persona_name not in model.personas:
             # fall back to first persona
             persona_name = list(model.personas.keys())[0]
-            LOG.error(f"Invalid persona requested: {persona_name}. "
+            LOG.error(f"Invalid persona requested: "
+                      f"{description.split(",")[1].strip()}. "
                       f"Inferred persona={persona_name}")
         system_prompt = model.personas[persona_name]
 
