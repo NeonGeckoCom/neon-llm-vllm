@@ -3,6 +3,8 @@ openai~=1.37
 transformers[sentencepiece]~=4.42
 jinja2~=3.1.0
 # networking
-neon-llm-core[chatbots]~=0.1,>=0.1.1a11
+# TODO: Update to PyPI release spec
+#neon-llm-core[chatbots]~=0.1,>=0.1.1a11
+neon-llm-core[chatbots]@git+https://github.com/neongeckocom/neon-llm-core@FIX_ResponseRouting
 ovos-utils~=0.0,>=0.0.32
 ovos-config~=0.1
