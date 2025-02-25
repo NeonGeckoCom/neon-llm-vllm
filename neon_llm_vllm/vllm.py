@@ -182,10 +182,14 @@ class VLLM(NeonLLM):
         """
         if not answers:
             return []
-        persona_parsed = self.parse_persona_dict(persona)
-        scores = self._score(prompt=question, targets=answers, persona=persona_parsed)
-        sorted_items = sorted(zip(range(len(answers)), scores), key=lambda x: x[1])
-        sorted_items_indexes = [x[0] for x in sorted_items]
+        try:
+            persona_parsed = self.parse_persona_dict(persona)
+            scores = self._score(prompt=question, targets=answers, persona=persona_parsed)
+            sorted_items = sorted(zip(range(len(answers)), scores), key=lambda x: x[1])
+            sorted_items_indexes = [x[0] for x in sorted_items]
+        except Exception as e:
+            LOG.exception(e)
+            return []
         return sorted_items_indexes
 
     def parse_persona_dict(self, persona: dict) -> dict:
@@ -200,6 +204,8 @@ class VLLM(NeonLLM):
                     break
             else:
                 # fall back to first model
+                LOG.info(f"Model {model_name} not found in "
+                         f"{self.models.keys()}")
                 model_name = list(self.models.keys())[0]
             LOG.error(f"Invalid model requested: "
                       f"{description.split(',')[0].strip()}. "
@@ -228,9 +234,14 @@ class VLLM(NeonLLM):
 
     def ask(self, message: str, chat_history: List[List[str]], persona: dict) -> str:
         """ Generates llm response based on user message and (user, llm) chat history """
-        persona_parsed = self.parse_persona_dict(persona)
-        prompt = self._assemble_prompt(message, chat_history, persona_parsed)
-        llm_text_output = self._call_model(prompt, persona_parsed)
+        try:
+            persona_parsed = self.parse_persona_dict(persona)
+            prompt = self._assemble_prompt(message, chat_history, persona_parsed)
+            llm_text_output = self._call_model(prompt, persona_parsed)
+        except Exception as e:
+            LOG.exception(e)
+            return ""
+
         return llm_text_output
 
     def _call_model(self, prompt: str, persona: dict) -> str:
@@ -242,15 +253,19 @@ class VLLM(NeonLLM):
         model: openai.OpenAI = persona["model"].model
         llm_model_name = persona["model"].vllm_model_name
         persona_name = persona['description'].split(',')[0].strip()
-        LOG.debug(f"Querying {model.base_url} for {persona_name}")
-        response = model.completions.create(
-            model=llm_model_name,
-            prompt=prompt,
-            temperature=0,
-            max_tokens=self.max_tokens,
-            extra_body=COMPLETION_GENERATION_EXTRA_ARGUMENTS,
-        )
-        text = response.choices[0].text
+        try:
+            LOG.debug(f"Querying {model.base_url} for {persona_name}")
+            response = model.completions.create(
+                model=llm_model_name,
+                prompt=prompt,
+                temperature=0,
+                max_tokens=self.max_tokens,
+                extra_body=COMPLETION_GENERATION_EXTRA_ARGUMENTS,
+            )
+            text = response.choices[0].text
+        except openai.InternalServerError as e:
+            LOG.error(f"Error querying {model.base_url}: {e}")
+            return ""
         LOG.debug(text)
         return text
 
@@ -306,18 +321,21 @@ class VLLM(NeonLLM):
         """
         model = persona["model"].model
         llm_model_name = persona["model"].vllm_model_name
-
-        completion = model.completions.create(
-            model=llm_model_name,
-            prompt=prompts,
-            echo=True,
-            logprobs=1,
-            max_tokens=1,
-            temperature=0,
-            extra_body={
-                "skip_special_tokens": False
-            }
-        )
+        try:
+            completion = model.completions.create(
+                model=llm_model_name,
+                prompt=prompts,
+                echo=True,
+                logprobs=1,
+                max_tokens=1,
+                temperature=0,
+                extra_body={
+                    "skip_special_tokens": False
+                }
+            )
+        except Exception as e:
+            # Make sure the endpoint is included in the exception
+            raise RuntimeError(f"Error querying {model.base_url}: {e}") from e
         logprobs_list = [choice.logprobs for choice in completion.choices]
         return logprobs_list
 
