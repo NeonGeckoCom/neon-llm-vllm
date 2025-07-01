@@ -1,3 +1,4 @@
+#!/bin/bash
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
 # Copyright 2008-2025 Neongecko.com Inc.
@@ -24,25 +25,13 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from os import environ
-from neon_llm_vllm.rmq import VllmMQ
-from neon_utils.log_utils import init_log
-from neon_utils.process_utils import start_health_check_server
-
-
-def main():
-    init_log(log_name="llm_vllm")
-    # Run RabbitMQ
-    vllm_mq_service = VllmMQ()
-    if status_port := environ.get("HEALTHCHECK_PORT"):
-        start_health_check_server(
-                vllm_mq_service.status,
-                int(status_port),
-                vllm_mq_service.check_health)
-    vllm_mq_service.run(run_sync=False,
-                        run_observer=False,
-                        daemonize_consumers=False)
-
-
-if __name__ == "__main__":
-    main()
+port="${HEALTHCHECK_PORT:-8080}"
+# Perform the health check using curl
+resp_content=$(curl -s http://localhost:${port}/status)
+status=$(echo "${resp_content}" | jq -r '.status')
+if [ "${status}" == "Ready" ]; then
+  exit 0  # Success
+else
+  echo "Health check failed with response: ${resp_content}" >&2
+  exit 1  # Failure
+fi
