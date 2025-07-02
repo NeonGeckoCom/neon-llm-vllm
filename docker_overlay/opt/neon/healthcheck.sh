@@ -25,7 +25,7 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-port="${HEALTHCHECK_PORT:-8080}"
+port="${HEALTHCHECK_PORT:-8000}"
 # Perform the health check using curl
 resp_content=$(curl -s http://localhost:${port}/status)
 status=$(echo "${resp_content}" | jq -r '.status')
