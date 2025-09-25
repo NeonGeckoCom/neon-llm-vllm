@@ -207,7 +207,7 @@ class VLLM(NeonLLM):
                 LOG.info(f"Model {model_name} not found in "
                          f"{self.models.keys()}")
                 model_name = list(self.models.keys())[0]
-            LOG.error(f"Invalid model requested: "
+            LOG.warning(f"Invalid model requested: "
                       f"{description.split(',')[0].strip()}. "
                       f"Inferred model={model_name}")
         model = self.models[model_name]
@@ -220,7 +220,7 @@ class VLLM(NeonLLM):
         if persona_name not in model.personas:
             # fall back to first persona
             persona_name = list(model.personas.keys())[0]
-            LOG.error(f"Invalid persona requested: "
+            LOG.warning(f"Invalid persona requested: "
                       f"{description.split(',')[1].strip()}. "
                       f"Inferred persona={persona_name}")
         system_prompt = model.personas[persona_name]
@@ -303,6 +303,7 @@ class VLLM(NeonLLM):
             :param targets: Output text sequences
             :returns: List of calculated logarithmic probabilities per output text sequence
         """
+        LOG.info(f"Getting scores for {len(targets)} targets")
         prompts = [self._assemble_prompt(message="", chat_history=[["user", prompt], ["llm", target]], persona=persona,
                                          add_generation_prompt=False) for target in targets]
         logprobs_list = self._compute_logprobs(prompts, persona)
@@ -384,4 +385,6 @@ class VLLM(NeonLLM):
             
             current_pos = next_pos
 
+        LOG.info(f"Determined start_index={start_index}, end_index={end_index} "
+                 f"for {list_of_strings}")
         return start_index, end_index

@@ -3,7 +3,8 @@ openai~=1.37
 transformers[sentencepiece]~=4.42,<4.50
 jinja2~=3.1.0
 # networking
-neon-llm-core[chatbots]~=0.2,>=0.2.1a2
-neon-utils[sentry]~=1.12,>=1.12.2a2
+neon-llm-core[chatbots]~=0.2,>=0.2.1a3
+neon-chatbot-core>=2.4.1a5
+neon-utils[sentry]~=1.12,>=1.13
 ovos-utils~=0.0,>=0.0.32
 ovos-config~=0.1
